@@ -5,7 +5,7 @@ import express, {
   type Response,
 } from "express";
 
-import {sessionRouter} from "./routes/session.routes";
+import { sessionRouter } from "./routes/session.routes";
 
 const app = express();
 
