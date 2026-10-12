@@ -16,6 +16,10 @@ import {
   recordEvent,
 } from "../services/event.service";
 
+import {
+  readOrder,
+} from "../services/tool.service";
+
 export const createSession = (
   req: Request,
   res: Response
@@ -142,3 +146,72 @@ export const getSessionEvents = (
     events,
   });
 };
+
+export const runReadOrderTool = (
+  req: Request<{ id: string }>,
+  res: Response
+) => {
+  const { id } = req.params;
+  const { orderId } = req.body;
+
+  const session = findSessionById(id);
+
+  if (!session) {
+    return res.status(404).json({
+      error: "Session not found",
+    });
+  }
+
+  if (!orderId || typeof orderId !== "string") {
+    return res.status(400).json({
+      error: "orderId is required",
+    });
+  }
+
+  recordEvent(
+    id,
+    "TOOL_REQUESTED",
+    {
+      tool: "read_order",
+      orderId,
+    }
+  );
+
+  const order = readOrder(orderId);
+
+  if (!order) {
+    recordEvent(
+      id,
+      "TOOL_FAILED",
+      {
+        tool: "read_order",
+        orderId,
+        reason: "ORDER_NOT_FOUND",
+      }
+    );
+
+    return res.status(404).json({
+      error: "Order not found",
+    });
+  }
+
+  recordEvent(
+    id,
+    "TOOL_EXECUTED",
+    {
+      tool: "read_order",
+      orderId,
+      result: {
+        status: order.status,
+        total: order.total,
+        refundable: order.refundable,
+      },
+    }
+  );
+
+  return res.status(200).json({
+    message: "Tool executed successfully",
+    tool: "read_order",
+    result: order,
+  });
+};   

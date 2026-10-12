@@ -2,7 +2,10 @@ import crypto from "node:crypto";
 
 export type AgentEventType =
   | "SESSION_STARTED"
-  | "USER_MESSAGE_RECEIVED";
+  | "USER_MESSAGE_RECEIVED"
+  | "TOOL_REQUESTED"
+  | "TOOL_EXECUTED"
+  | "TOOL_FAILED";
 
 export type AgentEvent = {
   id: string;
