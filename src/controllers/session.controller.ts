@@ -1,18 +1,20 @@
-import crypto from "node:crypto";
 import {
   type Request,
   type Response,
 } from "express";
 
-type AgentSession = {
-  id: string;
-  agentName: string;
-  customerMessage: string;
-  status: "ACTIVE" | "COMPLETED";
-  startedAt: string;
-};
+import {
+  createSessionRecord,
+  findSessionById,
+  getAllSessions,
+  updateSessionStatusById,
+  type SessionStatus,
+} from "../services/session.service";
 
-const sessions: AgentSession[] = [];
+import {
+  getEventsBySessionId,
+  recordEvent,
+} from "../services/event.service";
 
 export const createSession = (
   req: Request,
@@ -22,19 +24,30 @@ export const createSession = (
 
   if (!agentName || !customerMessage) {
     return res.status(400).json({
-      error: "agentName and customerMessage are required",
+      error:
+        "agentName and customerMessage are required",
     });
   }
 
-  const session: AgentSession = {
-    id: crypto.randomUUID(),
+  const session = createSessionRecord(
     agentName,
-    customerMessage,
-    status: "ACTIVE",
-    startedAt: new Date().toISOString(),
-  };
+    customerMessage
+  );
+  recordEvent(
+  session.id,
+  "SESSION_STARTED",
+  {
+    agentName: session.agentName,
+  }
+);
 
-  sessions.push(session);
+recordEvent(
+  session.id,
+  "USER_MESSAGE_RECEIVED",
+  {
+    message: session.customerMessage,
+  }
+);
 
   return res.status(201).json({
     message: "Agent session created",
@@ -46,6 +59,8 @@ export const getSessions = (
   _req: Request,
   res: Response
 ) => {
+  const sessions = getAllSessions();
+
   return res.status(200).json({
     count: sessions.length,
     sessions,
@@ -53,14 +68,12 @@ export const getSessions = (
 };
 
 export const getSessionById = (
-  req: Request,
+  req: Request<{ id: string }>,
   res: Response
 ) => {
   const { id } = req.params;
 
-  const session = sessions.find(
-    (session) => session.id === id
-  );
+  const session = findSessionById(id);
 
   if (!session) {
     return res.status(404).json({
@@ -74,14 +87,25 @@ export const getSessionById = (
 };
 
 export const updateSessionStatus = (
-  req: Request,
+  req: Request<{ id: string }>,
   res: Response
 ) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const session = sessions.find(
-    (session) => session.id === id
+  if (
+    status !== "ACTIVE" &&
+    status !== "COMPLETED"
+  ) {
+    return res.status(400).json({
+      error:
+        "status must be ACTIVE or COMPLETED",
+    });
+  }
+
+  const session = updateSessionStatusById(
+    id,
+    status as SessionStatus
   );
 
   if (!session) {
@@ -90,19 +114,31 @@ export const updateSessionStatus = (
     });
   }
 
-  if (
-    status !== "ACTIVE" &&
-    status !== "COMPLETED"
-  ) {
-    return res.status(400).json({
-      error: "status must be ACTIVE or COMPLETED",
-    });
-  }
-
-  session.status = status;
-
   return res.status(200).json({
     message: "Session updated",
     session,
+  });
+};
+
+export const getSessionEvents = (
+  req: Request<{ id: string }>,
+  res: Response
+) => {
+  const { id } = req.params;
+
+  const session = findSessionById(id);
+
+  if (!session) {
+    return res.status(404).json({
+      error: "Session not found",
+    });
+  }
+
+  const events = getEventsBySessionId(id);
+
+  return res.status(200).json({
+    sessionId: id,
+    count: events.length,
+    events,
   });
 };

@@ -3,9 +3,12 @@ import { Router } from "express";
 import {
   createSession,
   getSessionById,
+  getSessionEvents,
   getSessions,
   updateSessionStatus,
 } from "../controllers/session.controller";
+
+
 
 export const sessionRouter = Router();
 
@@ -16,3 +19,5 @@ sessionRouter.get("/", getSessions);
 sessionRouter.get("/:id", getSessionById);
 
 sessionRouter.patch("/:id", updateSessionStatus);
+
+sessionRouter.get("/:id/events", getSessionEvents);
