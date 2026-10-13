@@ -4,7 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
 
-    "rootDir": "controllers",
+    "rootDir": "./src",
     "outDir": "./dist",
 
     "strict": true,
@@ -18,6 +18,6 @@
     "types": ["node"]
   },
 
-  "include": ["controllers/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

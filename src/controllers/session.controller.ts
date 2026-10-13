@@ -17,8 +17,8 @@ import {
 } from "../services/event.service";
 
 import {
-  readOrder,
-} from "../services/tool.service";
+  executeTool,
+} from "../services/tool.gateway";
 
 export const createSession = (
   req: Request,
@@ -177,41 +177,33 @@ export const runReadOrderTool = (
     }
   );
 
-  const order = readOrder(orderId);
+  const result = executeTool(
+    id,
+    "read_order",
+    { orderId }
+  );
 
-  if (!order) {
-    recordEvent(
-      id,
-      "TOOL_FAILED",
-      {
-        tool: "read_order",
-        orderId,
-        reason: "ORDER_NOT_FOUND",
-      }
-    );
+  if (!result.success) {
+    if (result.error === "INVALID_INPUT") {
+      return res.status(400).json({
+        error: "orderId must be provided as a string",
+      });
+    }
 
-    return res.status(404).json({
-      error: "Order not found",
+    if (result.error === "ORDER_NOT_FOUND") {
+      return res.status(404).json({
+        error: "Order not found",
+      });
+    }
+
+    return res.status(400).json({
+      error: "Unsupported tool",
     });
   }
 
-  recordEvent(
-    id,
-    "TOOL_EXECUTED",
-    {
-      tool: "read_order",
-      orderId,
-      result: {
-        status: order.status,
-        total: order.total,
-        refundable: order.refundable,
-      },
-    }
-  );
-
   return res.status(200).json({
     message: "Tool executed successfully",
-    tool: "read_order",
-    result: order,
+    tool: result.tool,
+    result: result.result,
   });
-};   
+};
