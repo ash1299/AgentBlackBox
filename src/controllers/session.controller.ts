@@ -184,6 +184,12 @@ export const runReadOrderTool = (
   );
 
   if (!result.success) {
+    if (result.error === "POLICY_BLOCKED") {
+     return res.status(403).json({
+      error: "Tool execution blocked by policy",
+     });
+    }
+    
     if (result.error === "INVALID_INPUT") {
       return res.status(400).json({
         error: "orderId must be provided as a string",

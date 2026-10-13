@@ -1,4 +1,7 @@
 import {
+  evaluateToolPolicy,
+} from "./policy.service";
+import {
   recordEvent,
 } from "./event.service";
 
@@ -18,8 +21,8 @@ export type ToolExecutionResult =
       error:
         | "INVALID_INPUT"
         | "ORDER_NOT_FOUND"
-        | "UNSUPPORTED_TOOL";
-    };
+        | "UNSUPPORTED_TOOL"
+        | "POLICY_BLOCKED";    };
 
 export const executeTool = (
   sessionId: string,
@@ -34,6 +37,49 @@ export const executeTool = (
       input,
     }
   );
+const policyResult = evaluateToolPolicy(
+  tool,
+  input
+);
+
+recordEvent(
+  sessionId,
+  "POLICY_EVALUATED",
+  {
+    tool,
+    decision: policyResult.decision,
+    riskLevel: policyResult.riskLevel,
+    reason: policyResult.reason,
+  }
+);
+
+if (policyResult.decision === "BLOCK") {
+  recordEvent(
+    sessionId,
+    "ACTION_BLOCKED",
+    {
+      tool,
+      riskLevel: policyResult.riskLevel,
+      reason: policyResult.reason,
+    }
+  );
+
+  return {
+    success: false,
+    tool,
+    error: "POLICY_BLOCKED",
+  };
+}
+
+recordEvent(
+  sessionId,
+  "ACTION_ALLOWED",
+  {
+    tool,
+    riskLevel: policyResult.riskLevel,
+  }
+);
+
 
   if (tool === "read_order") {
     const orderId = input.orderId;
